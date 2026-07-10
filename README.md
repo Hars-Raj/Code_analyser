@@ -6,6 +6,14 @@ Originally built as a portfolio project, the long-term goal is to develop this i
 
 ---
 
+## Live Demo
+
+https://code-analyser-bk91.onrender.com
+
+> **Note:** The application is hosted on Render's free tier. The first visit after a period of inactivity may take **30-60 seconds** to load while the server wakes up.
+
+---
+
 ## Features
 
 - 🔍 **Two-agent AI pipeline** — analysis and refactoring handled by separate specialised agents
