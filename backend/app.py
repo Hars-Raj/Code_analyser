@@ -1,11 +1,14 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, render_template
 from flask_cors import CORS
 from dotenv import load_dotenv
-from reviewer import analyse_code, refactor_code
+from routes.analyse import analyse_bp
+from routes.refactor import refactor_bp
 import os
 
+# Load environment variables from .env file
 load_dotenv()
 
+# Initialize the Flask application
 app = Flask(
     __name__,
     template_folder="../frontend",
@@ -14,27 +17,16 @@ app = Flask(
 )
 CORS(app)
 
+app.register_blueprint(analyse_bp)
+app.register_blueprint(refactor_bp)
+
+# Define a route for the home page
 @app.route('/')
 def home():
     return render_template('index.html')
 
-@app.route('/analyse', methods=['POST'])
-def analyse():
-    data = request.get_json()
-    code = data.get('code')
-    language = data.get('language')
-    result = analyse_code(code, language, os.getenv("GEMINI_API_KEY"))
-    return jsonify(result)
 
-@app.route('/refactor', methods=['POST'])
-def refactor():
-    data = request.get_json()
-    code = data.get('code')
-    analysis_result = data.get('analysis')
-    result = refactor_code(code, analysis_result, os.getenv("GEMINI_API_KEY"))
-    return jsonify(result)
-
-
+# Run the Flask application
 if __name__ == "__main__":
     app.run(
         host="0.0.0.0",

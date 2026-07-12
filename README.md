@@ -16,7 +16,7 @@ https://code-analyser-bk91.onrender.com
 
 ## Features
 
-- 🔍 **Two-agent AI pipeline** — analysis and refactoring handled by separate specialised agents
+- 🔍 **Two-agent AI pipeline** — separate analysis and refactoring agents powered by Gemini
 - 🚨 **Severity-based issue categorisation** — issues ranked as High, Medium, or Low
 - 📋 **Expandable accordion reports** — click any issue to reveal the corresponding fix
 - 📊 **Code quality scores** — Understandability, Efficiency, and Maintainability rated out of 10
@@ -44,11 +44,11 @@ https://code-analyser-bk91.onrender.com
 
 ## How It Works
 
-1. Paste your code into the editor and select a language
-2. Click **Analyse** — Agent 1 reviews the code and returns issues, scores, and a summary
-3. Read the issues and try to fix them yourself
-4. Click **See Refactored Code** when ready — Agent 2 generates a corrected version using Agent 1's findings as context
-5. Expand each issue accordion to see exactly what was fixed and on which line
+1. The frontend sends the user's code to the `/analyse` API endpoint.
+2. Agent 1 (Gemini) analyses the code for bugs, vulnerabilities, and maintainability issues.
+3. The analysis is returned as structured JSON and displayed in the interface.
+4. Users are encouraged to fix the issues themselves before requesting a refactor.
+5. If requested, Agent 2 receives both the original code and Agent 1's analysis to generate an improved version with detailed explanations.
 
 ---
 
@@ -146,24 +146,31 @@ http://127.0.0.1:5000/
 Code_Analyser/
 │
 ├── backend/
-│   ├── app.py                  # Flask server — API routes
-│   ├── reviewer.py             # Two-agent pipeline logic
+│   ├── app.py                  # Flask application entry point
 │   ├── requirements.txt        # Python dependencies
+│   │
+│   ├── routes/                 # API endpoints
+│   │   ├── __init__.py
+│   │   ├── analyse.py
+│   │   └── refactor.py
+│   │
+│   ├── services/               # Business logic
+│   │   ├── __init__.py
+│   │   └── reviewer.py
+│   │
 │   └── prompts/
 │       ├── __init__.py
-│       ├── analyser_prompt.py  # Agent 1 prompt — code analysis
-│       └── refactorer_prompt.py # Agent 2 prompt — code refactoring
+│       ├── analyser_prompt.py
+│       └── refactorer_prompt.py
 │
 ├── frontend/
-│   ├── index.html              # App structure
-│   ├── style.css               # Dark mode styling and responsive layout
-│   └── script.js               # UI logic, API calls, accordion behaviour
+│   ├── index.html
+│   ├── style.css
+│   └── script.js
 │
 ├── .gitignore
 └── README.md
 ```
-
----
 
 ## API Endpoints
 
@@ -239,5 +246,3 @@ This project is currently unlicensed. All rights reserved by the author.
 
 **Raj Harsh**  
 GitHub: [github.com/Hars-Raj](https://github.com/Hars-Raj)
-
-Built as a pre-university portfolio project while interning at an AI startup in Singapore.
