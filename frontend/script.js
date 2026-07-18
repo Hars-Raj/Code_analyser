@@ -23,7 +23,6 @@ const PRISM_LANG = {
 // ── Init ───────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function () {
 
-  // CodeMirror — Tomorrow Night colours via custom theme name
   editor = CodeMirror.fromTextArea(document.getElementById('code-input'), {
     theme:          'tomorrow-night',
     lineNumbers:    true,
@@ -35,7 +34,6 @@ document.addEventListener('DOMContentLoaded', function () {
     placeholder:    'Paste your code here...',
   });
 
-  // Sync mode with language select
   document.getElementById('language').addEventListener('change', function () {
     editor.setOption('mode', CM_MODE[this.value] || 'python');
   });
@@ -101,7 +99,6 @@ document.addEventListener('DOMContentLoaded', function () {
       setLoading(document.getElementById('refactor-btn'), false, 'See Refactored Code');
     }
   });
-
 });
 
 
@@ -132,7 +129,7 @@ function displayAnalysis(data) {
   // Functionality
   document.getElementById('functionality-text').textContent = data.Functionality || '';
 
-  // Accordion — collapsed by default, no fixes yet
+  // Accordion
   const accordion = document.getElementById('accordion');
   accordion.innerHTML = '';
 
@@ -146,7 +143,6 @@ function displayAnalysis(data) {
   // Summary
   document.getElementById('summary-text').textContent = data.Summary || '';
 
-  // Show results
   document.getElementById('results').classList.remove('hidden');
 }
 
@@ -156,11 +152,9 @@ function displayRefactored(data) {
 
   const language = document.getElementById('language').value;
 
-  // 1 — Read-only editor
   editor.setOption('readOnly', 'nocursor');
   editor.getWrapperElement().classList.add('cm-readonly');
 
-  // 2 — Refactored panel
   const refactoredPanel = document.getElementById('refactored-panel');
   const codeEl          = document.getElementById('refactored-code');
 
@@ -174,48 +168,35 @@ function displayRefactored(data) {
 
   if (window.Prism) Prism.highlightElement(codeEl);
 
-  // 3 — Inject fixes into accordion bodies
+  // Inject fixes into accordion bodies
   const changes = data.changes || [];
 
   document.querySelectorAll('.accordion-item').forEach(function (item, i) {
-    const body   = item.querySelector('.accordion-body');
     const issue  = storedAnalysis && storedAnalysis.Issues ? storedAnalysis.Issues[i] : null;
     const change = changes[i];
-
-    body.innerHTML = '';
-    body.appendChild(createIssueDetail(issue));
-
-    if (change) {
-      body.appendChild(createFixDetail(change));
-    } else {
-      const pending = document.createElement('p');
-      pending.className = 'acc-fix-pending';
-      pending.textContent = 'No specific fix recorded for this issue.';
-      body.appendChild(pending);
-    }
+    rebuildBodyWithFix(item, issue, change);
   });
 
-  // 4 — Explanation
   if (data.explanation) {
     document.getElementById('explanation-text').textContent = stripMarkdown(data.explanation);
     document.getElementById('explanation-section').classList.remove('hidden');
   }
 
-  // 5 — Disable refactor button
   const rb      = document.getElementById('refactor-btn');
   rb.disabled   = true;
-  rb.textContent = 'Refactored';
+  rb.textContent = 'Refactored ✓';
 }
 
 
-
-// ── Strip basic markdown ───────────────────────────────────────────────
+// ── Create accordion item ──────────────────────────────────────────────
 function createAccordionItem(issue, index) {
   const severity = normaliseSeverity(issue && issue.severity);
+
   const item = document.createElement('div');
   item.className = 'accordion-item severity-' + severity;
   item.dataset.index = index;
 
+  // ── Trigger row
   const trigger = document.createElement('button');
   trigger.className = 'accordion-trigger';
   trigger.type = 'button';
@@ -229,25 +210,26 @@ function createAccordionItem(issue, index) {
   badge.className = 'severity-badge';
   badge.textContent = severity.toUpperCase();
 
+  const source = document.createElement('span');
+  const srcVal = (issue && issue.source) ? issue.source : 'Gemini';
+  source.className = 'acc-source source-' + srcVal.toLowerCase();
+  source.textContent = srcVal;
+
   const summary = document.createElement('span');
   summary.className = 'acc-issue-text';
   summary.textContent = getIssueSummary(issue);
 
   const chevron = document.createElement('span');
   chevron.className = 'acc-chevron';
-  chevron.textContent = 'v';
   chevron.setAttribute('aria-hidden', 'true');
+  chevron.textContent = '▼';
 
-  trigger.append(number, badge, summary, chevron);
+  trigger.append(number, badge, source, summary, chevron);
 
+  // ── Body — before refactor
   const body = document.createElement('div');
   body.className = 'accordion-body';
-  body.appendChild(createIssueDetail(issue));
-
-  const pending = document.createElement('p');
-  pending.className = 'acc-fix-pending';
-  pending.textContent = 'Run refactor to see where this is fixed.';
-  body.appendChild(pending);
+  buildBodyContent(body, issue, null);
 
   trigger.addEventListener('click', function (e) {
     e.stopPropagation();
@@ -259,82 +241,196 @@ function createAccordionItem(issue, index) {
   return item;
 }
 
-function createIssueDetail(issue) {
-  const detail = document.createElement('div');
-  detail.className = 'acc-detail';
 
-  const label = document.createElement('span');
-  label.className = 'acc-detail-label';
-  label.textContent = 'Issue';
+// ── Build body content (shared before and after refactor) ──────────────
+function buildBodyContent(body, issue, change) {
+  body.innerHTML = '';
 
-  const text = document.createElement('p');
-  text.className = 'acc-detail-text';
-  text.textContent = issue && issue.issue ? issue.issue : 'No issue detail provided.';
+  // 1 — What's wrong
+  body.appendChild(makeSection(
+    "📝 Issue",
+    issue && issue.issue ? issue.issue : 'No detail available.',
+    null
+  ));
 
-  detail.append(label, text);
-  return detail;
+  // 2 — Where in your code
+  if (issue && issue.location && issue.location.start_line) {
+    const loc = issue.location;
+    const lineText = (loc.end_line && loc.end_line !== loc.start_line)
+      ? 'Lines ' + loc.start_line + ' — ' + loc.end_line
+      : 'Line ' + loc.start_line;
+    body.appendChild(makeSection('📍 Location ', lineText, 'acc-location'));
+  }
+
+  // 3 — Source
+  const sourceSection = document.createElement('div');
+  sourceSection.className = 'acc-section';
+  sourceSection.appendChild(makeSectionLabel('🔍 Analysis Engine'));
+
+  const meta = document.createElement('div');
+  meta.className = 'acc-meta';
+
+  if (issue && issue.source) {
+    const s = document.createElement('span');
+    s.className = 'acc-meta-line';
+    s.textContent = issue.source === 'Semgrep' ? 'Semgrep Static Analysis' : issue.source;
+    meta.appendChild(s);
+  }
+
+  if (issue && issue.rule) {
+    const ruleSection = document.createElement('div');
+    ruleSection.className = 'acc-section';
+    ruleSection.appendChild(makeSectionLabel('Rule'));
+    const ruleVal = document.createElement('span');
+    ruleVal.className = 'acc-meta-line acc-rule';
+    ruleVal.textContent = issue.rule;
+    ruleSection.appendChild(ruleVal);
+    // will be appended after sourceSection
+    meta._ruleSection = ruleSection;
+  }
+
+  // 4 — OWASP (only if non-empty)
+  if (issue && issue.owasp && issue.owasp.length > 0) {
+    const section = document.createElement('div');
+    section.className = 'acc-section';
+
+    const lbl = makeSectionLabel('OWASP category');
+    section.appendChild(lbl);
+
+    const pills = document.createElement('div');
+    pills.className = 'owasp-pills';
+
+    issue.owasp.forEach(function (entry) {
+      // Build display string
+      const display = (entry.id && entry.name && entry.id !== entry.name)
+        ? entry.id + ' — ' + entry.name
+        : (entry.name || entry.id || String(entry));
+
+      const pill = document.createElement('span');
+      pill.className = 'owasp-pill';
+
+      if (entry.url) {
+        const a = document.createElement('a');
+        a.href = entry.url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.className = 'owasp-link';
+        a.textContent = display;
+        pill.appendChild(a);
+      } else {
+        pill.textContent = display;
+      }
+
+      pills.appendChild(pill);
+    });
+
+    section.appendChild(pills);
+
+    sourceSection.appendChild(meta);
+    body.appendChild(sourceSection);
+
+    if (meta._ruleSection) {
+      body.appendChild(meta._ruleSection);
+    }
+
+    body.appendChild(section);
+  }
+
+  // 4 — Fix section
+  const fixSection = document.createElement('div');
+  fixSection.className = 'acc-fix-section';
+
+  if (change) {
+    // Populated after refactor
+    fixSection.classList.add('acc-fix-populated');
+
+    const fixLbl = makeSectionLabel('Suggested Fix');
+    fixLbl.classList.add('acc-fix-label');
+    fixSection.appendChild(fixLbl);
+
+    const fixLine = document.createElement('span');
+    fixLine.className = 'acc-fix-line';
+    fixLine.textContent = 'Line ' + change.line;
+    fixSection.appendChild(fixLine);
+
+    const fixDesc = document.createElement('span');
+    fixDesc.className = 'acc-fix-desc';
+    fixDesc.textContent = change.change || 'No fix description provided.';
+    fixSection.appendChild(fixDesc);
+
+  } else {
+    // Pending state
+    fixSection.classList.add('acc-fix-pending-section');
+
+    const fixLbl = makeSectionLabel('Suggested Fix');
+    fixSection.appendChild(fixLbl);
+
+    const pending = document.createElement('p');
+    pending.className = 'acc-fix-pending';
+    pending.textContent = 'Run Refactor to generate an improved version of this code.';
+    fixSection.appendChild(pending);
+  }
+
+  body.appendChild(fixSection);
 }
 
-function createFixDetail(change) {
-  const fix = document.createElement('div');
-  fix.className = 'acc-fix';
 
-  const label = document.createElement('span');
-  label.className = 'acc-detail-label';
-  label.textContent = 'Fix';
+// ── Rebuild body after refactor ────────────────────────────────────────
+function rebuildBodyWithFix(item, issue, change) {
+  const body = item.querySelector('.accordion-body');
+  buildBodyContent(body, issue, change);
+}
 
-  const line = document.createElement('span');
-  line.className = 'acc-fix-line';
-  line.textContent = 'Line ' + change.line;
 
-  const description = document.createElement('span');
-  description.className = 'acc-fix-desc';
-  description.textContent = change.change || 'No fix description provided.';
+// ── DOM helpers ────────────────────────────────────────────────────────
+function makeSection(labelText, contentText, extraClass) {
+  const section = document.createElement('div');
+  section.className = 'acc-section';
 
-  fix.append(label, line, description);
-  return fix;
+  section.appendChild(makeSectionLabel(labelText));
+
+  const p = document.createElement('p');
+  p.className = 'acc-section-text' + (extraClass ? ' ' + extraClass : '');
+  p.textContent = contentText;
+  section.appendChild(p);
+
+  return section;
+}
+
+function makeSectionLabel(text) {
+  const span = document.createElement('span');
+  span.className = 'acc-section-label';
+  span.textContent = text;
+  return span;
 }
 
 function getIssueSummary(issue) {
   if (!issue) return 'Issue summary unavailable.';
-
-  const summary =
-    issue.short_summary ||
-    issue.shortSummary ||
-    issue['Short summary'] ||
-    issue['Short Summary'];
-
-  if (summary) return summary;
-  return firstSentence(issue.issue || 'Issue summary unavailable.');
+  return issue.short_summary || firstSentence(issue.issue || 'Issue summary unavailable.');
 }
 
 function firstSentence(text) {
-  const cleanText = String(text).replace(/\s+/g, ' ').trim();
-  const match = cleanText.match(/^(.+?[.!?])(\s|$)/);
-  return match ? match[1] : cleanText;
+  const clean = String(text).replace(/\s+/g, ' ').trim();
+  const match = clean.match(/^(.+?[.!?])(\s|$)/);
+  return match ? match[1] : clean;
 }
 
 function normaliseSeverity(severity) {
-  const value = String(severity || 'low').toLowerCase();
-  return ['low', 'medium', 'high'].includes(value) ? value : 'low';
+  const v = String(severity || 'low').toLowerCase();
+  return ['low', 'medium', 'high'].includes(v) ? v : 'low';
 }
 
 function stripMarkdown(text) {
   if (!text) return '';
   return text
-    // Bold: **text** or __text__
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/__(.+?)__/g, '$1')
-    // Italic: *text* or _text_
     .replace(/\*(.+?)\*/g, '$1')
     .replace(/_(.+?)_/g, '$1')
-    // Numbered list items: "1. " at start
     .replace(/^\d+\.\s+/gm, '')
-    // Strip any remaining backticks
     .replace(/`/g, '');
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────
 function resetResults() {
   document.getElementById('results').classList.add('hidden');
   document.getElementById('refactored-panel').classList.add('hidden');

@@ -9,7 +9,7 @@ def analyse_code(code, language, api_key):
     """Analyzes the given code using the Google GenAI API and Semgrep."""
     # Run Semgrep analysis
     semgrep_findings = run_semgrep(code, language)
-
+    
     # Run Gemini analysis
     gemini_findings = gemini_analyse(code, language, api_key, semgrep_findings)
     return gemini_findings

@@ -1,12 +1,31 @@
 from flask import Flask, render_template
 from flask_cors import CORS
 from dotenv import load_dotenv
-from routes.analyse import analyse_bp
-from routes.refactor import refactor_bp
+from backend.routes.analyse import analyse_bp
+from backend.routes.refactor import refactor_bp
 import os
 
 # Load environment variables from .env file
 load_dotenv()
+
+import subprocess
+import threading
+
+# Warm up Semgrep rules on startup
+def warm_semgrep():
+    """Pre-download Semgrep rules on startup so first user request isn't slow"""
+    try:
+        subprocess.run(
+            ["semgrep", "--config", "p/security-audit", "--dry-run", "/tmp"],
+            capture_output=True,
+            timeout=120
+        )
+        print("Semgrep rules cached")
+    except Exception as e:
+        print("Semgrep warmup failed:", e)
+
+# Run warmup in background so Flask starts immediately
+threading.Thread(target=warm_semgrep, daemon=True).start()
 
 # Initialize the Flask application
 app = Flask(

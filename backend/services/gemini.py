@@ -24,7 +24,7 @@ def analyse_code(code, language, api_key, semgrep_findings):
         # Set the temperature to control the randomness of the output
         config= types.GenerateContentConfig(
             temperature=0.1,
-            max_output_tokens=4096,
+            max_output_tokens=16000,
 
             # Force the output to always be valid JSON
             response_mime_type="application/json",

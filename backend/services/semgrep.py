@@ -2,6 +2,7 @@ import subprocess
 import tempfile
 import json
 import os
+from backend.data.owasp import get_owasp_info
 
 
 def process_semgrep_findings(findings):
@@ -13,17 +14,45 @@ def process_semgrep_findings(findings):
     }
 
     processed_findings = []
-    for finding in findings.get('results', []):
+
+    for index, finding in enumerate(findings.get("results", []), start=1):
+
         processed_findings.append({
-            "issue": finding.get('extra', {}).get('message', 'No message provided'),
+
+            "id": f"SEC-{index:03}",
+
             "short_summary": "",
-            "severity": severity_map.get(finding.get('extra', {}).get('severity', 'unknown'), "Low"),
-            "start_line": finding.get('start', {}).get('line', 'unknown'),
-            "end_line": finding.get('end', {}).get('line', 'unknown'),
-            "rule": finding.get("check_id"),
+
+            "issue": finding.get("extra", {}).get(
+                "message",
+                "No message provided"
+            ),
+
+            "severity": severity_map.get(
+                finding.get("extra", {}).get("severity"),
+                "Low"
+            ),
+
+            "category": "Security",
+
             "source": "Semgrep",
-            "owasp": finding.get("extra", {}).get("metadata", {}).get("owasp", []),
+
+            "location": {
+                "start_line": finding.get("start", {}).get("line"),
+                "end_line": finding.get("end", {}).get("line")
+            },
+
+            "rule": finding.get("check_id"),
+
+            "owasp": [
+                get_owasp_info(ref)
+                for ref in finding.get("extra", {})
+                                 .get("metadata", {})
+                                 .get("owasp", [])
+            ]
+
         })
+
     return processed_findings
 
 
@@ -56,7 +85,7 @@ def run_semgrep(code, language):
             ],
             capture_output=True,
             text=True,
-            timeout=40,
+            timeout=120,
             encoding='utf-8',
             errors='replace'
         )

@@ -424,6 +424,95 @@ section p {
 
 .accordion-item.open .acc-chevron { transform: rotate(180deg); }
 
+.issue-category{
+
+    display:inline-block;
+
+    margin-bottom:18px;
+
+    padding:6px 14px;
+
+    border-radius:8px;
+
+    font-size:1rem;
+
+    font-weight:700;
+
+    letter-spacing:.04em;
+
+    text-transform:uppercase;
+
+    background:#203040;
+
+    color:white;
+
+}
+
+.detail-heading{
+
+    margin-top:18px;
+
+    margin-bottom:8px;
+
+    font-size:.8rem;
+
+    font-weight:700;
+
+    color:var(--text-muted);
+
+    text-transform:uppercase;
+
+    letter-spacing:.05em;
+
+}
+
+.detail-value{
+
+    margin-bottom:4px;
+
+    color:var(--text);
+
+}
+
+.acc-detail-text{
+
+    line-height:1.65;
+
+    color:var(--text);
+
+}
+
+.owasp-list{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:6px;
+
+    margin-top:6px;
+
+}
+
+.owasp-link{
+
+    color:var(--accent);
+
+    text-decoration:none;
+
+}
+
+.owasp-link:hover{
+
+    text-decoration:underline;
+
+}
+
+.acc-meta-line {
+  font-weight: 600;
+  font-size: clamp(0.78rem, 0.88vw, 0.88rem);
+}
+
 /* Body — hidden by default, shown when open */
 .accordion-body {
   max-height: 0;
@@ -589,4 +678,182 @@ select { font-size: var(--text-sm) !important; }
 
 .accordion-item.open .accordion-body {
   padding: clamp(12px, 1.2vh, 18px) clamp(16px, 1.4vw, 24px) clamp(12px, 1.2vh, 18px) clamp(48px, 4.5vw, 64px) !important;
+}
+
+/* ════════════════════════════════════════════════════════════
+   ACCORDION BODY — v2 redesign
+   ════════════════════════════════════════════════════════════ */
+
+/* Body open state — flex column with gap between sections */
+.accordion-item.open .accordion-body {
+  display: flex !important;
+  flex-direction: column;
+  gap: 0;
+  max-height: 1200px;
+  padding: clamp(10px, 1.1vh, 16px)
+           clamp(16px, 1.6vw, 24px)
+           clamp(10px, 1.1vh, 16px)
+           clamp(48px, 4.5vw, 64px) !important;
+  border-top: 1px solid var(--border);
+}
+
+/* Each named section */
+.acc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.acc-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* Section label — small uppercase heading */
+.acc-section-label {
+  font-family: var(--mono);
+  font-size: clamp(0.60rem, 0.70vw, 0.70rem);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+/* Section body text */
+.acc-section-text {
+  font-size: clamp(0.84rem, 1vw, 0.96rem);
+  color: var(--text-primary);
+  line-height: 1.72;
+  margin: 0;
+}
+
+/* Location — mono accent colour */
+.acc-location {
+  font-family: var(--mono) !important;
+  font-size: clamp(0.78rem, 0.88vw, 0.88rem) !important;
+  color: var(--accent) !important;
+}
+
+/* ── Source tag in trigger row ────────────────────────────── */
+.acc-source {
+  font-family: var(--mono);
+  font-size: clamp(0.56rem, 0.62vw, 0.62rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.source-semgrep {
+  background: rgba(88, 166, 255, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(88, 166, 255, 0.25);
+}
+
+.source-gemini {
+  background: rgba(63, 185, 80, 0.12);
+  color: var(--low);
+  border: 1px solid rgba(63, 185, 80, 0.25);
+}
+
+/* ── OWASP pills ──────────────────────────────────────────── */
+.owasp-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.owasp-pill {
+  font-family: var(--mono);
+  font-size: clamp(0.66rem, 0.76vw, 0.76rem);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.owasp-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.owasp-link:hover { text-decoration: underline; }
+
+/* ── Learn more meta ──────────────────────────────────────── */
+.acc-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.acc-meta-line {
+  font-family: var(--mono);
+  font-size: clamp(0.66rem, 0.76vw, 0.76rem);
+  color: var(--text-secondary);
+}
+
+.acc-rule {
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.acc-meta-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.acc-meta-link:hover { text-decoration: underline; }
+
+/* ── Fix section — pending state ──────────────────────────── */
+.acc-fix-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 0 0;
+}
+
+.acc-fix-pending-section .acc-section-label {
+  color: var(--text-muted);
+}
+
+.acc-fix-pending {
+  font-size: clamp(0.82rem, 0.95vw, 0.92rem);
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+/* ── Fix section — populated after refactor ───────────────── */
+.acc-fix-populated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 12px 14px !important;
+  margin-top: 4px;
+  gap: 6px;
+}
+
+.acc-fix-label {
+  color: var(--accent) !important;
+}
+
+.acc-fix-line {
+  font-family: var(--mono);
+  font-size: clamp(0.70rem, 0.80vw, 0.80rem);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.acc-fix-desc {
+  font-size: clamp(0.84rem, 1vw, 0.96rem);
+  color: var(--text-primary);
+  line-height: 1.65;
 }

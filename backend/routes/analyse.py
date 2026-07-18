@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from services.reviewer import analyse_code
+from backend.services.reviewer import analyse_code
 import os
 
 # Define a Blueprint for the analyse route
