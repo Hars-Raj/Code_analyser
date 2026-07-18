@@ -1,6 +1,6 @@
 # AI Code Analyser
 
-AI Code Analyser is a full-stack web application that analyses source code using a two-agent AI pipeline powered by Google's Gemini API. The first agent identifies bugs, security vulnerabilities, and code quality issues with severity ratings. The second agent generates a refactored version of the code that addresses every issue found — but only when the user asks for it, encouraging developers to attempt fixes themselves first.
+AI Code Analyser is a full-stack web application that analyses source code using a hybrid pipeline combining **Semgrep static analysis** and **Google Gemini AI**. Semgrep performs deterministic security scanning and maps findings to OWASP Top 10 categories. Gemini then analyses what Semgrep missed — logical bugs, architectural issues, and maintainability concerns — before a second agent generates a refactored version of the code.
 
 Originally built as a portfolio project, the long-term goal is to develop this into an educational platform that helps programmers improve their skills through iterative, AI-assisted feedback.
 
@@ -10,17 +10,20 @@ Originally built as a portfolio project, the long-term goal is to develop this i
 
 https://code-analyser-bk91.onrender.com
 
-> **Note:** The application is hosted on Render's free tier. The first visit after a period of inactivity may take **30-60 seconds** to load while the server wakes up.
+> **Note:** The application is hosted on Render's free tier. The first visit after a period of inactivity may take **30–60 seconds** to load while the server wakes up.
 
 ---
 
 ## Features
 
-- 🔍 **Two-agent AI pipeline** — separate analysis and refactoring agents powered by Gemini
-- 🚨 **Severity-based issue categorisation** — issues ranked as High, Medium, or Low
-- 📋 **Expandable accordion reports** — click any issue to reveal the corresponding fix
+- 🔬 **Semgrep static analysis** — deterministic security scanning with 500+ rules, no AI guessing
+- 🤖 **Gemini AI analysis** — catches logical bugs, architectural issues, and edge cases Semgrep misses
+- 🛡️ **OWASP Top 10 mapping** — every security finding is mapped to the relevant OWASP category with reference links
+- 🚨 **Severity-based issue categorisation** — issues ranked as High, Medium, or Low with source attribution
+- 📋 **Expandable accordion reports** — click any issue to see the full explanation, location, OWASP mapping, analysis engine, and rule ID
 - 📊 **Code quality scores** — Understandability, Efficiency, and Maintainability rated out of 10
 - ✏️ **Syntax-highlighted code editor** — powered by CodeMirror with Tomorrow Night theme
+- 🔄 **Side-by-side refactor view** — original and refactored code displayed simultaneously for easy comparison
 - 🌐 **Multi-language support** — Python, JavaScript, Java, C++, TypeScript
 - 📱 **Responsive design** — scales across screen sizes from laptop to large monitor
 - 🎨 **Dark mode UI** — code-editor aesthetic throughout
@@ -44,11 +47,13 @@ https://code-analyser-bk91.onrender.com
 
 ## How It Works
 
-1. The frontend sends the user's code to the `/analyse` API endpoint.
-2. Agent 1 (Gemini) analyses the code for bugs, vulnerabilities, and maintainability issues.
-3. The analysis is returned as structured JSON and displayed in the interface.
-4. Users are encouraged to fix the issues themselves before requesting a refactor.
-5. If requested, Agent 2 receives both the original code and Agent 1's analysis to generate an improved version with detailed explanations.
+1. The user pastes code into the editor and selects a language.
+2. The `/analyse` endpoint runs **Semgrep** and **Gemini in parallel**:
+   - Semgrep performs static analysis, detecting security vulnerabilities and mapping each finding to OWASP Top 10 categories with rule IDs.
+   - Gemini receives both the code and Semgrep's verified findings, adds educational explanations to Semgrep issues, and identifies additional problems Semgrep cannot detect — logical bugs, missing validation, resource leaks, architectural concerns.
+3. The combined analysis is returned as structured JSON and displayed in the accordion interface, with each issue showing its source (Semgrep or Gemini), severity, OWASP mapping where applicable, and line location.
+4. Users are encouraged to attempt fixes themselves before requesting a refactor.
+5. When requested, Agent 2 receives both the original code and the full analysis to generate an improved version with a detailed change log.
 
 ---
 
@@ -64,6 +69,10 @@ https://code-analyser-bk91.onrender.com
 - [Flask](https://flask.palletsprojects.com/) — web framework
 - [Flask-CORS](https://flask-cors.readthedocs.io/) — cross-origin request handling
 - [python-dotenv](https://pypi.org/project/python-dotenv/) — environment variable management
+
+### Security Analysis
+- [Semgrep](https://semgrep.dev/) — static analysis engine with OWASP-mapped security rules
+- Runs as a subprocess against a temporary file, returns structured JSON findings
 
 ### AI
 - [Google Gemini API](https://ai.google.dev/) — `gemini-2.5-flash` model
@@ -113,6 +122,8 @@ source venv/bin/activate
 pip install -r backend/requirements.txt
 ```
 
+Semgrep is included in `requirements.txt` and installs automatically. No separate installation is required.
+
 ### 4. Configure environment variables
 
 Inside the `backend/` folder, create a file named `.env` and add your API key:
@@ -134,9 +145,9 @@ Open your browser and navigate to:
 
 ```
 http://localhost:5000
-or 
-http://127.0.0.1:5000/
 ```
+
+> **Note:** On first run, Semgrep will download and cache its rule registry. This takes 30–60 seconds. Subsequent runs are significantly faster.
 
 ---
 
@@ -146,39 +157,47 @@ http://127.0.0.1:5000/
 Code_Analyser/
 │
 ├── backend/
-│   ├── app.py                  # Flask application entry point
-│   ├── requirements.txt        # Python dependencies
+│   ├── app.py                      # Flask application entry point
+│   ├── requirements.txt            # Python dependencies
 │   │
-│   ├── routes/                 # API endpoints
+│   ├── data/                       # Static reference data
 │   │   ├── __init__.py
-│   │   ├── analyse.py
-│   │   └── refactor.py
+│   │   └── owasp.py                # OWASP category definitions
 │   │
-│   ├── services/               # Business logic
+│   ├── routes/                     # API route handlers (thin layer)
 │   │   ├── __init__.py
-│   │   └── reviewer.py
+│   │   ├── analyse.py              # POST /analyse
+│   │   └── refactor.py             # POST /refactor
 │   │
-│   └── prompts/
+│   ├── services/                   # Business logic
+│   │   ├── __init__.py
+│   │   ├── reviewer.py             # Orchestrates Semgrep + Gemini pipeline
+│   │   ├── gemini.py               # Gemini API calls — Agent 1 and Agent 2
+│   │   └── semgrep.py              # Semgrep subprocess runner and parser
+│   │
+│   └── prompts/                    # AI prompt templates
 │       ├── __init__.py
-│       ├── analyser_prompt.py
-│       └── refactorer_prompt.py
+│       ├── analyser_prompt.py      # Agent 1 — hybrid analysis prompt
+│       └── refactorer_prompt.py    # Agent 2 — refactoring prompt
 │
 ├── frontend/
-│   ├── index.html
-│   ├── style.css
-│   └── script.js
+│   ├── index.html                  # App structure
+│   ├── style.css                   # Dark mode styling and responsive layout
+│   └── script.js                   # UI logic, API calls, accordion behaviour
 │
 ├── .gitignore
 └── README.md
 ```
+
+---
 
 ## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/` | Serves the frontend |
-| `POST` | `/analyse` | Runs Agent 1 — returns issues, scores, summary |
-| `POST` | `/refactor` | Runs Agent 2 — returns refactored code and change log |
+| `POST` | `/analyse` | Runs Semgrep + Gemini pipeline — returns issues with OWASP mappings, scores, and summary |
+| `POST` | `/refactor` | Runs Agent 2 — returns refactored code and per-issue change log |
 
 **Request body for `/analyse`:**
 ```json
@@ -196,6 +215,26 @@ Code_Analyser/
 }
 ```
 
+**Example issue in `/analyse` response:**
+```json
+{
+  "issue": "The user_id parameter is directly concatenated into the SQL query string, making it vulnerable to SQL injection.",
+  "short_summary": "SQL Injection vulnerability due to string concatenation.",
+  "severity": "High",
+  "category": "Security",
+  "source": "Semgrep",
+  "location": { "start_line": 9, "end_line": 9 },
+  "rule": "python.sqlalchemy.security.sqlalchemy-execute-raw-query",
+  "owasp": [
+    {
+      "id": "A03:2021",
+      "name": "Injection",
+      "url": "https://owasp.org/Top10/A03_2021-Injection/"
+    }
+  ]
+}
+```
+
 ---
 
 ## Environment Variables
@@ -208,23 +247,31 @@ Code_Analyser/
 
 ## Known Limitations
 
+- Analysis takes 30–90 seconds depending on code complexity — Semgrep rule matching and Gemini reasoning both take time
+- Semgrep's free tier rules cover common vulnerabilities but miss some patterns available in the commercial tier
 - The Gemini free tier has rate limits — heavy usage may result in temporary 429 errors
-- Users must supply their own API key for hosted use (bring-your-own-key model)
-- Refactored output quality depends on Gemini's response — results may vary between runs
+- Refactored output quality depends on Gemini's response and may vary between runs
 - Large files may hit output token limits on the free tier
 
 ---
 
 ## Roadmap
 
-Planned improvements for future versions:
+### Completed
+- [x] Semgrep static analysis integration
+- [x] OWASP Top 10 mapping on security findings
+- [x] Hybrid Semgrep + Gemini analysis pipeline
+- [x] Source attribution per issue (Semgrep vs Gemini)
+- [x] Restructured backend architecture (routes / services / prompts)
 
-- [ ] User authentication and accounts
-- [ ] Analysis history and session persistence
-- [ ] Progress tracking across multiple attempts (comparison agent)
-- [ ] OWASP vulnerability categorisation
+### Planned
 - [ ] PDF report export
-- [ ] HuggingFace model as an alternative provider
+- [ ] OSV dependency scanning from requirements.txt / package.json
+- [ ] ZIP project upload for multi-file analysis
+- [ ] Comparison agent — submit revised code and see what improved
+- [ ] Progress tracking across multiple attempts
+- [ ] User authentication and accounts
+- [ ] Institution dashboard for bootcamps and universities
 - [ ] Database integration via Supabase
 - [ ] Dockerised deployment
 
@@ -244,5 +291,7 @@ This project is currently unlicensed. All rights reserved by the author.
 
 ## Author
 
-**Raj Harsh**  
+**Raj Harsh**
 GitHub: [github.com/Hars-Raj](https://github.com/Hars-Raj)
+
+Built as a pre-university portfolio project while interning at an AI startup in Singapore.
